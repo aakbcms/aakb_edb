@@ -90,6 +90,7 @@ function aakb_edb_feed() {
             'locality' => $address['locality'],
             'mail' => $group_wrapper->field_ding_library_mail->value(),
             'phone' => $group_wrapper->field_ding_library_phone_number->value(),
+            'name' => $group_wrapper->title->value(),
           );
         }
         catch (EntityMetadataWrapperException $e) {
