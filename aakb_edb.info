@@ -1,0 +1,7 @@
+name = Aakb Eventdatabase
+description = Feed to export events to detskeriaarhus.dk
+core = 7.x
+package = AAKB
+project = aakb_edb
+dependencies[] = ding_event
+dependencies[] = ding_place2book

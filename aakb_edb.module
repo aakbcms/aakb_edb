@@ -1,0 +1,240 @@
+<?php
+/**
+ * @file
+ * Defines the exports.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function aakb_edb_menu() {
+  $items = array();
+
+  $path = drupal_get_path('module', 'edb');
+
+  $items['feeds/eventdb'] = array(
+    'title' => 'Events',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'aakb_edb_feed',
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+/**
+ * Build JSON feed with current events.
+ */
+function aakb_edb_feed() {
+  $events = array();
+
+  if ($cache = cache_get('aakb_edb_events', 'cache') && time() < $cache->expire) {
+    $events = $cache->data;
+  }
+  else {
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', 'ding_event')
+      ->propertyCondition('status', NODE_PUBLISHED)
+      ->fieldCondition('field_ding_event_date', 'value', strtotime("midnight", time()), '>=');
+
+    $result = $query->execute();
+    if (isset($result['node'])) {
+      $nids = array_keys($result['node']);
+      $nodes = entity_load('node', $nids);
+
+      foreach ($nodes as $node) {
+        $wrapper = entity_metadata_wrapper('node', $node);
+
+        $tags = array();
+        $tagObjects = $wrapper->field_ding_event_tags->value();
+        foreach ($tagObjects as $tag) {
+          $tags[] = $tag->name;
+        }
+
+        $groups = [];
+        $groupObjects = $wrapper->ding_event_groups_ref->value();
+        foreach ($groupObjects as $group) {
+          $groups[] = array(
+            'nid' => $group->nid,
+            'title' => $group->title,
+            'link' => url('node/' . $group->nid, array(
+              'absolute' => TRUE,
+            )),
+          );
+        }
+
+        $timezone = $wrapper->field_ding_event_date->value()['timezone'];
+        $dt = new DateTime($wrapper->field_ding_event_date->value()['value'], new DateTimeZone($timezone));
+        $start = $dt->format('c');
+        $dt = new DateTime($wrapper->field_ding_event_date->value()['value2'], new DateTimeZone($timezone));
+        $stop = $dt->format('c');
+
+        $og_group = $wrapper->og_group_ref->value();
+        $og_group = $og_group ? reset($og_group) : $og_group;
+
+        try {
+          $group_wrapper = entity_metadata_wrapper('node', $og_group);
+        }
+        catch (EntityMetadataWrapperException $e) {
+          // Not connected to a library.
+        }
+
+        try {
+          $address = $group_wrapper->field_ding_library_addresse->value();
+          $location = array(
+            'hint' => $wrapper->field_ding_event_location->value()['name_line'],
+            'thoroughfare' => $address['thoroughfare'],
+            'postal_code' => $address['postal_code'],
+            'locality' => $address['locality'],
+            'mail' => $group_wrapper->field_ding_library_mail->value(),
+            'phone' => $group_wrapper->field_ding_library_phone_number->value(),
+          );
+        }
+        catch (EntityMetadataWrapperException $e) {
+          $location = array();
+        }
+
+        try {
+          $geo = $group_wrapper->field_ding_library_geocode->value();
+          $location['coordinates'] = array(
+            'lat' => $geo['lat'],
+            'lon' => $geo['lon']
+          );
+        }
+        catch (EntityMetadataWrapperException $e) {
+          // Don't do anything.
+        }
+
+        $tickets = array();
+        if (isset($og_group->nid)) {
+          $tickets = aakb_edb_get_ticketinfo($node->nid, $og_group->nid);
+        }
+
+        $lead = $wrapper->field_ding_event_lead->value();
+        $body = $wrapper->field_ding_event_body->value();
+
+        $events[] = array(
+          'nid' => $node->nid,
+          'title' => $node->title,
+          'language' => $node->language,
+          'changed' => date('c', $node->changed),
+          'categories' => $wrapper->field_ding_event_category->value()->name,
+          'tags' => $tags,
+          'groups' => $groups,
+          'lead' => isset($lead['safe_value']) ? $lead['safe_value'] : '',
+          'body' => isset($body['safe_value']) ? $body['safe_value'] : '',
+          'date' => array(
+            'start' => $start,
+            'stop' => $stop,
+          ),
+          'images' => array(
+            'list' => $wrapper->field_ding_event_list_image->value() ? file_create_url($wrapper->field_ding_event_list_image->value()['uri']) : '',
+            'title' => $wrapper->field_ding_event_title_image->value() ? file_create_url($wrapper->field_ding_event_title_image->value()['uri']) : '',
+          ),
+          'location' => $location,
+          'price' => NULL !== $wrapper->field_ding_event_price->value() ? $wrapper->field_ding_event_price->value() : 0,
+          'targets' => NULL !== $wrapper->field_ding_event_target->value() ? $wrapper->field_ding_event_target->value()->name : '',
+          'unpublish_on' => isset($node->unpublish_on) ? date('c', $node->unpublish_on) : 0,
+          'tickets' => $tickets,
+        );
+      }
+    }
+
+    // Store the result in cache for an hour.
+    cache_set('aakb_edb_events', $events, 'cache', REQUEST_TIME + 3600);
+  }
+
+  drupal_json_output($events);
+}
+
+/**
+ * Get place2book ticket information.
+ *
+ * Base on the render function found in the place2book module.
+ *
+ * @param int $event_nid
+ *   The events node id to find ticket for.
+ * @param int $library_nid
+ *   The node id of the library that has the event.
+ *
+ * @return array
+ *   With the keys 'type' and 'url' if ticket is found.
+ */
+function aakb_edb_get_ticketinfo($event_nid, $library_nid) {
+  $place2book_id = 0;
+
+  // Get data from ding_place2book table.
+  $place2book_result = db_query('SELECT place2book_id, maintain_copy, passive FROM {ding_place2book} WHERE nid = :nid', array(
+    ':nid' => $event_nid,
+  ));
+  foreach ($place2book_result as $place2book) {
+    $place2book_id = $place2book->place2book_id;
+  }
+
+  $data = array(
+    'status' => 'unknown',
+    'url' => '',
+  );
+
+  if ($place2book_id) {
+    $service_settings = variable_get('ding_place2book', array());
+
+    $api_key = place2book_get_api_key($library_nid);
+    if ($api_key == NULL) {
+      return $data;
+    }
+
+    $options = array(
+      'method' => 'GET',
+      'headers' => array(
+        'X-PLACE2BOOK-API-TOKEN' => $api_key,
+        'X-PLACE2BOOK-EVENT-ID' => $place2book_id,
+      ),
+    );
+    $p2b_result = drupal_http_request($service_settings['service_url'] . '/available_tickets', $options);
+
+    // We must have a sales-status header.
+    if (isset($p2b_result->headers['sales-status'])) {
+
+      // Check if the event is closed for admissions.
+      if ($p2b_result->headers['sales-status'] == 'closed') {
+        $data['type'] = 'closed-admission';
+      }
+      // Check if sales period is in the future and ticket sale has not started
+      // yet.
+      elseif ($p2b_result->headers['sales-status'] == 'upcoming') {
+        $data['type'] = 'sale-not-started';
+      }
+      else {
+
+        /**
+         * Check if we have no tickets left.
+         *
+         * Number from Available-Tickets header is a string and must be tested as such
+         * also, Available-Tickets header can have a negative value, which we also interpret as "no ticket left"
+         */
+        if ($p2b_result->headers['available-tickets'] == "0" || (int)$p2b_result->headers['available-tickets'] < 0) {
+          $data['type'] = 'no-tickets-left';
+        }
+        else {
+          /**
+           * Check to see if we should present an link for ordering a ticket.
+           *
+           * Number from Available-Tickets header is a string and must be typecast as integer
+           * Available-Tickets header can also be the string "Ubegraenset antal" (unlimited), so we check for existence of "antal" in the string
+
+           * "Begræset antal" we would still get the same result even though
+           * the meaning is much different.
+           */
+          if ($p2b_result->headers['sales-status'] == 'open' && ((int)$p2b_result->headers['available-tickets'] > 0 || strpos($p2b_result->headers['available-tickets'], 'antal') > 0)) {
+            $data['type'] = 'order-link';
+            $data['url'] = $p2b_result->headers['location'];
+          }
+        }
+      }
+    }
+  }
+
+  return $data;
+}

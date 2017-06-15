@@ -1,0 +1,19 @@
+<?php
+/**
+ * @file
+ * Handle setup and clean-up for the module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function aakb_edb_install() {
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function aakb_edb_uninstall() {
+
+}
