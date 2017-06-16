@@ -118,6 +118,9 @@ function aakb_edb_feed() {
 
         $events[] = array(
           'nid' => $node->nid,
+          'url' => url('node/' . $node->nid, array(
+            'absolute' => TRUE,
+          )),
           'title' => $node->title,
           'language' => $node->language,
           'changed' => date('c', $node->changed),
