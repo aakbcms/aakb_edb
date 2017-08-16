@@ -65,7 +65,7 @@ function aakb_edb_feed() {
           );
         }
 
-        $timezone = $wrapper->field_ding_event_date->value()['timezone'];
+        $timezone = $wrapper->field_ding_event_date->value()['timezone_db'];
         $dt = new DateTime($wrapper->field_ding_event_date->value()['value'], new DateTimeZone($timezone));
         $start = $dt->format('c');
         $dt = new DateTime($wrapper->field_ding_event_date->value()['value2'], new DateTimeZone($timezone));
