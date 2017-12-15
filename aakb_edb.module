@@ -126,7 +126,7 @@ function aakb_edb_feed() {
           'categories' => $wrapper->field_ding_event_category->value()->name,
           'tags' => $tags,
           'groups' => $groups,
-          'lead' => isset($lead['safe_value']) ? $lead['safe_value'] : '',
+          'lead' => isset($lead['safe_value']) ? $lead['safe_value'] : $lead,
           'body' => isset($body['safe_value']) ? $body['safe_value'] : '',
           'date' => array(
             'start' => $start,
