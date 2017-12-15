@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Defines the exports.
@@ -27,7 +28,7 @@ function aakb_edb_feed() {
   $events = array();
 
   $cache = cache_get('aakb_edb_events', 'cache');
-  if (FALSE && $cache && time() < $cache->expire) {
+  if ($cache && time() < $cache->expire) {
     $events = $cache->data;
   }
   else {
@@ -99,7 +100,7 @@ function aakb_edb_feed() {
           $geo = $group_wrapper->field_ding_library_geocode->value();
           $location['coordinates'] = array(
             'lat' => $geo['lat'],
-            'lon' => $geo['lon']
+            'lon' => $geo['lon'],
           );
         }
         catch (EntityMetadataWrapperException $e) {
@@ -125,7 +126,7 @@ function aakb_edb_feed() {
           'categories' => $wrapper->field_ding_event_category->value()->name,
           'tags' => $tags,
           'groups' => $groups,
-          'lead' => isset($lead['safe_value']) ? $lead['safe_value'] : '',
+          'lead' => isset($lead['safe_value']) ? $lead['safe_value'] : $lead,
           'body' => isset($body['safe_value']) ? $body['safe_value'] : '',
           'date' => array(
             'start' => $start,
@@ -220,23 +221,26 @@ function aakb_edb_get_ticketinfo($event_nid, $library_nid) {
         /**
          * Check if we have no tickets left.
          *
-         * Number from Available-Tickets header is a string and must be tested as such
-         * also, Available-Tickets header can have a negative value, which we also interpret as "no ticket left"
+         * Number from Available-Tickets header is a string and must be tested
+         * as such also, Available-Tickets header can have a negative value,
+         * which we also interpret as "no ticket left".
          */
-        if ($p2b_result->headers['available-tickets'] == "0" || (int)$p2b_result->headers['available-tickets'] < 0) {
+        if ($p2b_result->headers['available-tickets'] == "0" || (int) $p2b_result->headers['available-tickets'] < 0) {
           $data['url'] = $p2b_result->headers['location'];
         }
         else {
           /**
            * Check to see if we should present an link for ordering a ticket.
            *
-           * Number from Available-Tickets header is a string and must be typecast as integer
-           * Available-Tickets header can also be the string "Ubegraenset antal" (unlimited), so we check for existence of "antal" in the string
-
+           * Number from Available-Tickets header is a string and must be
+           * typecast as integer.
+           * Available-Tickets header can also be the string "Ubegraenset antal"
+           * (unlimited), so we check for existence of "antal" in the string.
+           *
            * "Begræset antal" we would still get the same result even though
            * the meaning is much different.
            */
-          if ($p2b_result->headers['sales-status'] == 'open' && ((int)$p2b_result->headers['available-tickets'] > 0 || strpos($p2b_result->headers['available-tickets'], 'antal') > 0)) {
+          if ($p2b_result->headers['sales-status'] == 'open' && ((int) $p2b_result->headers['available-tickets'] > 0 || strpos($p2b_result->headers['available-tickets'], 'antal') > 0)) {
             $data['url'] = $p2b_result->headers['location'];
           }
         }
