@@ -180,7 +180,7 @@ function aakb_edb_get_ticketinfo($event_nid, $library_nid) {
   ));
   foreach ($place2book_result as $place2book) {
     // Only find ticket links for non-passive events.
-    if ($place2book->passive === 0) {
+    if ($place2book->passive == 0) {
       $place2book_id = $place2book->place2book_id;
     }
   }
