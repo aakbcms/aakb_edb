@@ -121,6 +121,17 @@ function aakb_edb_feed() {
         $lead = $wrapper->field_ding_event_lead->value();
         $body = $wrapper->field_ding_event_body->value();
 
+        $organizers = array();
+        try {
+          $organizers_terms = $wrapper->field_ding_event_organizer->value();
+          foreach ($organizers_terms as $term) {
+            $organizers[] = $term->name;
+          }
+        }
+        catch (EntityMetadataWrapperException $e) {
+          // Don't do anything.
+        }
+
         $events[] = array(
           'nid' => $node->nid,
           'url' => url('node/' . $node->nid, array(
@@ -146,6 +157,7 @@ function aakb_edb_feed() {
           'price' => NULL !== $wrapper->field_ding_event_price->value() ? $wrapper->field_ding_event_price->value() : 0,
           'targets' => NULL !== $wrapper->field_ding_event_target->value() ? $wrapper->field_ding_event_target->value()->name : '',
           'unpublish_on' => isset($node->unpublish_on) ? date('c', $node->unpublish_on) : 0,
+          'organizer' => $organizers,
           'tickets' => $tickets,
         );
       }
