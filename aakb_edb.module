@@ -118,8 +118,25 @@ function aakb_edb_feed() {
           }
         }
 
-        $lead = $wrapper->field_ding_event_lead->value();
-        $body = $wrapper->field_ding_event_body->value();
+        $lead_wrapper = $wrapper->field_ding_event_lead->value();
+        $body_wrapper = $wrapper->field_ding_event_body->value();
+
+        $lead = $lead_wrapper['safe_value'] ?? $lead_wrapper;
+        $body = $body_wrapper['safe_value'] ?? '';
+
+        // 'Det Sker i Aarhus' data model has no 'lead' concept so we have to merge 'lead' and 'body'.
+        $description = $lead ? '<p><strong>'. $lead .'</strong></p>' . $body : $body;
+
+        $organizers = array();
+        try {
+          $organizers_terms = $wrapper->field_ding_event_organizer->value();
+          foreach ($organizers_terms as $term) {
+            $organizers[] = $term->name;
+          }
+        }
+        catch (EntityMetadataWrapperException $e) {
+          // Don't do anything.
+        }
 
         $events[] = array(
           'nid' => $node->nid,
@@ -132,8 +149,8 @@ function aakb_edb_feed() {
           'categories' => $wrapper->field_ding_event_category->value()->name,
           'tags' => $tags,
           'groups' => $groups,
-          'lead' => isset($lead['safe_value']) ? $lead['safe_value'] : $lead,
-          'body' => isset($body['safe_value']) ? $body['safe_value'] : '',
+          'lead' => $lead,
+          'body' => $description,
           'date' => array(
             'start' => $start,
             'stop' => $stop,
@@ -143,9 +160,10 @@ function aakb_edb_feed() {
             'title' => $wrapper->field_ding_event_title_image->value() ? file_create_url($wrapper->field_ding_event_title_image->value()['uri']) : '',
           ),
           'location' => $location,
-          'price' => NULL !== $wrapper->field_ding_event_price->value() ? $wrapper->field_ding_event_price->value() : 0,
-          'targets' => NULL !== $wrapper->field_ding_event_target->value() ? $wrapper->field_ding_event_target->value()->name : '',
+          'price' => $wrapper->field_ding_event_price->value() ?? 0,
+          'targets' => $wrapper->field_ding_event_target->value() ?? '',
           'unpublish_on' => isset($node->unpublish_on) ? date('c', $node->unpublish_on) : 0,
+          'organizer' => $organizers,
           'tickets' => $tickets,
         );
       }
