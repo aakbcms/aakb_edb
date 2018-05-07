@@ -3,4 +3,4 @@ description = Feed to export events to detskeriaarhus.dk
 core = 7.x
 package = AAKB
 dependencies[] = ding_event
-dependencies[] = ding_place2book
+dependencies[] = ding_pretix
