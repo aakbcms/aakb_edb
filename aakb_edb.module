@@ -114,12 +114,6 @@ function aakb_edb_feed() {
         if (isset($external_ticket)) {
           $tickets['url'] = $external_ticket['url'];
         }
-        else {
-          $pretix_url = ding_pretix_get_shop_url($node->nid);
-          if($pretix_url) {
-            $tickets['url'] = $pretix_url;
-          }
-        }
 
         $lead_wrapper = $wrapper->field_ding_event_lead->value();
         $body_wrapper = $wrapper->field_ding_event_body->value();
