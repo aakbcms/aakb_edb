@@ -122,7 +122,7 @@ function aakb_edb_feed() {
         $body = $body_wrapper['safe_value'] ?? '';
 
         // 'Det Sker i Aarhus' data model has no 'lead' concept so we have to merge 'lead' and 'body'.
-        $description = $lead ? '<p><strong>'. $lead .'</strong></p>' . $body : $body;
+        $description = $lead ? '<p><strong>'. $lead .'</strong></p> ' . $body : $body;
 
         $organizers = array();
         try {
