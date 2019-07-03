@@ -1,6 +1,7 @@
 name = Aakb Eventdatabase
-description = Feed to export events to detskeriaarhus.dk
+description = Handle events integration with detskeriaarhus.dk
 core = 7.x
 package = AAKB
 dependencies[] = ding_event
 dependencies[] = ding_pretix
+dependencies[] = ding_libs

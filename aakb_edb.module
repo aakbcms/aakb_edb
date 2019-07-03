@@ -5,6 +5,9 @@
  * Defines the exports.
  */
 
+use GuzzleHttp\Client as HttpClient;
+
+
 /**
  * Implements hook_menu().
  */
@@ -171,4 +174,74 @@ function aakb_edb_feed() {
   }
 
   drupal_json_output($events);
+}
+
+/**
+ * Implements hook_cron().
+ */
+function aakb_edb_cron() {
+  aakb_edb_sync_organizer();
+}
+
+/**
+ * Updates taxonomy on ding_event with organizer from detskeriaarhus.dk.
+ */
+function aakb_edb_sync_organizer() {
+  $endpoint = 'https://api.detskeriaarhus.dk/api/organizers';
+  $client = new HttpClient();
+  $response = $client->get(
+    $endpoint,
+    array(
+      'headers' => array(
+        'Accept' => 'application/json',
+      ),
+    )
+  );
+  $results = json_decode($response->getBody());
+
+  $vocabulary =   taxonomy_vocabulary_machine_name_load('event_organizer');
+  $vid = $vocabulary->vid;
+
+  $new_term = (object) array(
+    'name' => '',
+    'description' => '',
+    'vid' => $vid,
+    'field_event_organizer_link' => array(
+      LANGUAGE_NONE => array(
+        array(
+          'url' => '',
+          'title' => NULL,
+          'attributes' => array(),
+        ),
+      ),
+    ),
+    'field_remote_id' => array(
+      LANGUAGE_NONE => array(
+        array(
+          'value' => '',
+        ),
+      ),
+    ),
+  );
+
+  foreach ($results as $result) {
+    $efq = new EntityFieldQuery();
+    $existing = $efq->entityCondition('entity_type', 'taxonomy_term')
+      ->propertyCondition('vid', $vid)
+      ->fieldCondition('field_remote_id', 'value', $result->id)
+      ->execute();
+
+    if (empty($existing)) {
+      $term = clone  $new_term;
+    }
+    else {
+      $tids = array_keys($existing['taxonomy_term']);
+      $term = taxonomy_term_load(reset($tids));
+    }
+
+    $term->name = $result->name;
+    $term->field_event_organizer_link[LANGUAGE_NONE][0]['url'] = $result->url;
+    $term->field_remote_id[LANGUAGE_NONE][0]['value'] = $result->id;
+    taxonomy_term_save($term);
+  }
 }
