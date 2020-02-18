@@ -160,6 +160,7 @@ function aakb_edb_feed() {
             'title' => $wrapper->field_ding_event_title_image->value() ? file_create_url($wrapper->field_ding_event_title_image->value()['uri']) : '',
           ),
           'location' => $location,
+          'room' => $wrapper->field_ding_event_place->value() ?? '',
           'price' => $wrapper->field_ding_event_price->value() ?? 0,
           'targets' => $wrapper->field_ding_event_target->value() ?? '',
           'unpublish_on' => isset($node->unpublish_on) ? date('c', $node->unpublish_on) : 0,
