@@ -127,12 +127,12 @@ function aakb_edb_feed() {
         // 'Det Sker i Aarhus' data model has no 'lead' concept so we have to merge 'lead' and 'body'.
         $description = $lead ? '<p><strong>'. $lead .'</strong></p>' . $body : $body;
 
-        $organizers = array();
         try {
-          $organizers_terms = $wrapper->field_ding_event_organizer->value();
-          foreach ($organizers_terms as $term) {
-            $organizers[] = $term->name;
-          }
+          $organizers_term = array_shift($wrapper->field_ding_event_organizers->value());
+
+          $organizer = [];
+          $organizer['id'] = $organizers_term->tid;
+          $organizer['name'] = $organizers_term->name;
         }
         catch (EntityMetadataWrapperException $e) {
           // Don't do anything.
@@ -163,7 +163,7 @@ function aakb_edb_feed() {
           'price' => $wrapper->field_ding_event_price->value() ?? 0,
           'targets' => $wrapper->field_ding_event_target->value() ?? '',
           'unpublish_on' => isset($node->unpublish_on) ? date('c', $node->unpublish_on) : 0,
-          'organizer' => $organizers,
+          'organizer' => $organizer,
           'tickets' => $tickets,
         );
       }
