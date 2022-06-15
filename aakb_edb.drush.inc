@@ -24,6 +24,12 @@ function aakb_edb_drush_command() {
       'options' => array(),
       'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
     ),
+    'list-orphaned-event-organizers' => array(
+      'description' => dt('List orphaned event organizers, i.e. organizer terms with no remote id.'),
+      'arguments' => array(),
+      'options' => array(),
+      'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+    ),
   );
 }
 
@@ -39,4 +45,11 @@ function drush_aakb_edb_sync_event_organizer() {
  */
 function drush_aakb_edb_link_event_organizers() {
   aakb_edb_link_organizers();
+}
+
+/**
+ * List orphaned event organizers.
+ */
+function drush_aakb_edb_list_orphaned_event_organizers() {
+  aakb_edb_list_orphaned_event_organizers();
 }

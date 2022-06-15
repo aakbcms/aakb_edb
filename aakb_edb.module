@@ -278,6 +278,29 @@ function aakb_edb_link_organizers() {
 }
 
 /**
+ * List organizers without remote id.
+ */
+function aakb_edb_list_orphaned_event_organizers() {
+  $vocabulary = taxonomy_vocabulary_machine_name_load('event_organizer');
+  $vid = $vocabulary->vid;
+
+  $efq = new EntityFieldQuery();
+  $result = $efq->entityCondition('entity_type', 'taxonomy_term')
+    ->propertyCondition('vid', $vid)
+    ->execute();
+
+  if (isset($result['taxonomy_term'])) {
+    $terms = taxonomy_term_load_multiple(array_keys($result['taxonomy_term']));
+    foreach ($terms as $term) {
+      if (!isset($term->field_remote_id[LANGUAGE_NONE][0]['value'])) {
+        drush_print(dt('Term @name (#@id) does not have a remote id',
+          array('@name' => $term->name, '@id' => $term->tid)));
+      }
+    }
+  }
+}
+
+/**
  * Get all organizer from Event Database.
  *
  * @return array|stdClass[]
