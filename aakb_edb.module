@@ -188,19 +188,32 @@ function aakb_edb_cron() {
  * Updates taxonomy on ding_event with organizer from detskeriaarhus.dk.
  */
 function aakb_edb_sync_organizer() {
-  $endpoint = 'https://api.detskeriaarhus.dk/api/organizers';
-  $client = new HttpClient();
-  $response = $client->get(
-    $endpoint,
-    array(
-      'headers' => array(
-        'Accept' => 'application/json',
-      ),
-    )
-  );
-  $results = json_decode($response->getBody());
+  $endpoint_base_url = 'https://api.detskeriaarhus.dk';
+  $endpoint = $endpoint_base_url.'/api/organizers';
 
-  $vocabulary =   taxonomy_vocabulary_machine_name_load('event_organizer');
+  $results = [];
+  while (NULL !== $endpoint) {
+    $client = new HttpClient();
+    $response = $client->get(
+      $endpoint,
+      array(
+        'headers' => array(
+          'accept' => 'application/ld+json',
+        ),
+      )
+    );
+    $data = json_decode($response->getBody());
+
+    $endpoint = isset($data->{'hydra:view'}->{'hydra:next'}) ? $endpoint_base_url.$data->{'hydra:view'}->{'hydra:next'} : NULL;
+
+    if (isset($data->{'hydra:member'})) {
+      $results[] = $data->{'hydra:member'};
+    }
+  }
+  // Flatten results.
+  $results = array_merge(...$results);
+
+  $vocabulary = taxonomy_vocabulary_machine_name_load('event_organizer');
   $vid = $vocabulary->vid;
 
   $new_term = (object) array(
@@ -233,7 +246,7 @@ function aakb_edb_sync_organizer() {
       ->execute();
 
     if (empty($existing)) {
-      $term = clone  $new_term;
+      $term = clone $new_term;
     }
     else {
       $tids = array_keys($existing['taxonomy_term']);
