@@ -18,6 +18,12 @@ function aakb_edb_drush_command() {
       'aliases' => array('sync-eo'),
       'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
     ),
+    'link-event-organizers' => array(
+      'description' => dt('Link existing event organizers with event database by name (by setting remote id on the term).'),
+      'arguments' => array(),
+      'options' => array(),
+      'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+    ),
   );
 }
 
@@ -26,4 +32,11 @@ function aakb_edb_drush_command() {
  */
 function drush_aakb_edb_sync_event_organizer() {
   aakb_edb_sync_organizer();
+}
+
+/**
+ * Link event organizers.
+ */
+function drush_aakb_edb_link_event_organizers() {
+  aakb_edb_link_organizers();
 }

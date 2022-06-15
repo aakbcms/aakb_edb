@@ -188,30 +188,7 @@ function aakb_edb_cron() {
  * Updates taxonomy on ding_event with organizer from detskeriaarhus.dk.
  */
 function aakb_edb_sync_organizer() {
-  $endpoint_base_url = 'https://api.detskeriaarhus.dk';
-  $endpoint = $endpoint_base_url.'/api/organizers';
-
-  $results = [];
-  while (NULL !== $endpoint) {
-    $client = new HttpClient();
-    $response = $client->get(
-      $endpoint,
-      array(
-        'headers' => array(
-          'accept' => 'application/ld+json',
-        ),
-      )
-    );
-    $data = json_decode($response->getBody());
-
-    $endpoint = isset($data->{'hydra:view'}->{'hydra:next'}) ? $endpoint_base_url.$data->{'hydra:view'}->{'hydra:next'} : NULL;
-
-    if (isset($data->{'hydra:member'})) {
-      $results[] = $data->{'hydra:member'};
-    }
-  }
-  // Flatten results.
-  $results = array_merge(...$results);
+  $results = _aakb_edb_get_organizers();
 
   $vocabulary = taxonomy_vocabulary_machine_name_load('event_organizer');
   $vid = $vocabulary->vid;
@@ -258,4 +235,78 @@ function aakb_edb_sync_organizer() {
     $term->field_remote_id[LANGUAGE_NONE][0]['value'] = $result->id;
     taxonomy_term_save($term);
   }
+}
+
+/**
+ * Link existing organizers by name.
+ */
+function aakb_edb_link_organizers() {
+  $results = _aakb_edb_get_organizers();
+
+  $vocabulary = taxonomy_vocabulary_machine_name_load('event_organizer');
+  $vid = $vocabulary->vid;
+
+  foreach ($results as $result) {
+    $efq = new EntityFieldQuery();
+    $existing = $efq->entityCondition('entity_type', 'taxonomy_term')
+      ->propertyCondition('vid', $vid)
+      ->propertyCondition('name', $result->name)
+      ->execute();
+
+    if (empty($existing)) {
+      drush_print(dt('Cannot find term with name @name', array('@name' => $result->name)));
+      continue;
+    }
+    else {
+      $tids = array_keys($existing['taxonomy_term']);
+      $term = taxonomy_term_load(reset($tids));
+      if (isset($term->field_remote_id[LANGUAGE_NONE][0]['value'])) {
+        drush_print(dt('Term @name already linked (remote id: @remote_id)',
+          array('@name' => $result->name, '@remote_id' => $result->id)));
+        continue;
+      } else {
+        drush_print(dt('Linking term @name (remote id: @remote_id)',
+          array('@name' => $result->name, '@remote_id' => $result->id)));
+      }
+    }
+
+    $term->name = $result->name;
+    $term->field_event_organizer_link[LANGUAGE_NONE][0]['url'] = $result->url;
+    $term->field_remote_id[LANGUAGE_NONE][0]['value'] = $result->id;
+    taxonomy_term_save($term);
+  }
+}
+
+/**
+ * Get all organizer from Event Database.
+ *
+ * @return array|stdClass[]
+ *   The list of organizers.
+ */
+function _aakb_edb_get_organizers() {
+  $endpoint_base_url = 'https://api.detskeriaarhus.dk';
+  $endpoint = $endpoint_base_url.'/api/organizers';
+
+  $results = [];
+  while (NULL !== $endpoint) {
+    $client = new HttpClient();
+    $response = $client->get(
+      $endpoint,
+      array(
+        'headers' => array(
+          'accept' => 'application/ld+json',
+        ),
+      )
+    );
+    $data = json_decode($response->getBody());
+
+    $endpoint = isset($data->{'hydra:view'}->{'hydra:next'}) ? $endpoint_base_url.$data->{'hydra:view'}->{'hydra:next'} : NULL;
+
+    if (isset($data->{'hydra:member'})) {
+      $results[] = $data->{'hydra:member'};
+    }
+  }
+
+  // Flatten result.
+  return array_merge(...$results);
 }
