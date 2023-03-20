@@ -57,6 +57,13 @@ function aakb_edb_feed() {
           $tags[] = $tag->name;
         }
 
+        $category = $wrapper->field_ding_event_category->value()->name;
+
+        // For the DOKK1 integration we need the category. But the EventDB
+        // has no "category" feature. This extre field allows the EventDB
+        // to include the category as a tag
+        $category_tags = array_unique(array_merge([$category], $tags));
+
         $groups = [];
         $groupObjects = $wrapper->ding_event_groups_ref->value();
         foreach ($groupObjects as $group) {
@@ -155,8 +162,9 @@ function aakb_edb_feed() {
           'title' => $node->title,
           'language' => $node->language,
           'changed' => date('c', $node->changed),
-          'categories' => $wrapper->field_ding_event_category->value()->name,
+          'category' => $category,
           'tags' => $tags,
+          'category_tags' => $category_tags,
           'groups' => $groups,
           'lead' => $lead,
           'body' => $description,
