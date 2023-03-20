@@ -127,12 +127,21 @@ function aakb_edb_feed() {
         // 'Det Sker i Aarhus' data model has no 'lead' concept so we have to merge 'lead' and 'body'.
         $description = $lead ? '<p><strong>'. $lead .'</strong></p> ' . $body : $body;
 
+        $partners = [];
         try {
-          $organizers_term = array_shift($wrapper->field_ding_event_organizers->value());
+          $event_organizer_terms = $wrapper->field_ding_event_organizers->value();
 
-          $organizer = [];
-          $organizer['id'] = $organizers_term->tid;
-          $organizer['name'] = $organizers_term->name;
+          foreach ($event_organizer_terms as $event_organizer) {
+            $partner = [];
+            $partner['id'] = $event_organizer->tid;
+            $partner['name'] = $event_organizer->name;
+            // name="field_remote_id[und][0][value]"
+            $partner['remote_id'] = $event_organizer->field_remote_id->value();
+            // name="field_event_organizer_link[und][0][url]"
+            $partner['remote_id'] = $event_organizer->field_event_organizer_link->value();
+
+            $partners[] = $partner;
+          }
         }
         catch (EntityMetadataWrapperException $e) {
           // Don't do anything.
@@ -164,7 +173,7 @@ function aakb_edb_feed() {
           'price' => $wrapper->field_ding_event_price->value() ?? 0,
           'targets' => $wrapper->field_ding_event_target->value() ?? '',
           'unpublish_on' => isset($node->unpublish_on) ? date('c', $node->unpublish_on) : 0,
-          'organizer' => $organizer,
+          'partners' => $partners,
           'tickets' => $tickets,
         );
       }
