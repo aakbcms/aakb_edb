@@ -54,7 +54,9 @@ function aakb_edb_feed() {
         $tags = array();
         $tagObjects = $wrapper->field_ding_event_tags->value();
         foreach ($tagObjects as $tag) {
-          $tags[] = $tag->name;
+          if (is_object($tag)) {
+            $tags[] = $tag->name;
+          }
         }
 
         $category = $wrapper->field_ding_event_category->value()->name;
