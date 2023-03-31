@@ -143,9 +143,9 @@ function aakb_edb_feed() {
             $partner['id'] = $event_organizer->tid;
             $partner['name'] = $event_organizer->name;
             // name="field_remote_id[und][0][value]"
-            $partner['remote_id'] = $event_organizer->field_remote_id->value();
+            $partner['remote_id'] = !empty($event_organizer->field_remote_id) ? $event_organizer->field_remote_id[LANGUAGE_NONE][0]['value'] : '';
             // name="field_event_organizer_link[und][0][url]"
-            $partner['remote_id'] = $event_organizer->field_event_organizer_link->value();
+            $partner['url'] = !empty($event_organizer->field_event_organizer_link) ? $event_organizer->field_event_organizer_link[LANGUAGE_NONE][0]['url'] : '';
 
             $partners[] = $partner;
           }
